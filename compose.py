@@ -1,7 +1,14 @@
 #!/usr/bin/env python
+"""
+Given a CSV containing some fields, generate letters of thanks
+and announcments to those on whose behalf gifts were made.
+"""
+
 import os
 import sys 
 import re
+
+
 
 donee_template = """We are pleased to inform you that
 $TYPE$
