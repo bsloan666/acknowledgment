@@ -13,7 +13,7 @@ class HTMLier():
         for key, val in attrs.items():
             result += ' '+key+'="'+val+'"'
         result += '>'+body
-        result += '</'+name+'>'
+        result += '</'+name+'>\n'
         return result
 
 if __name__ == "__main__":

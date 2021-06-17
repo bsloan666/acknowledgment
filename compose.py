@@ -8,11 +8,11 @@ import os
 import sys 
 import re
 import htmlier
+import datetime
 from collections import Counter
 
 donee_template = """Dear $DONEE$,
-We are pleased to inform you that
-$TYPE$
+We are pleased to inform you that $TYPE$
 $PARTICIPLE$ been made to the church
 $HONOREE$
 From
@@ -22,7 +22,8 @@ We give thanks to God for these gifts.
 West Los Angeles United Methodist Church
 1913 Purdue Avenue
 Los Angeles, CA 90025
-"""
+
+$DATE$"""
 
 donor_template = """Dear $DONOR$,
 Thank you for your gift$PLURAL$
@@ -34,10 +35,10 @@ We give thanks to God for your gift.
 West Los Angeles United Methodist Church
 1913 Purdue Avenue, LA, CA 90025
 
-No goods or services were provided to the
+No goods or services were provided by the
 church in return for this contribution.
-October 30, 2020
-"""
+
+$DATE$"""
 
 ack = """An acknowledgement of your gift
 has been sent to
@@ -83,6 +84,8 @@ def donor_thanks(donor, fields):
         result = re.sub('\$PLURAL\$', 's totaling', result)
     else:    
         result = re.sub('\$PLURAL\$', ' of', result)
+
+    result = re.sub('\$DATE\$', datetime.date.today().strftime("%B %d, %Y"), result)
     return result
 
 def donee_announce(donee, fields):
@@ -106,13 +109,16 @@ def donee_announce(donee, fields):
         result = re.sub('\$PARTICIPLE\$', 'has', result)
     tmp = ""
     if multiple_donors:
+        tmp = "\n"
         for i, tp in enumerate(list(set(fields['types']))):
             if i:
                 tmp+=' and '
             tmp+=tp+'s\n'
     else:
-        tmp = "a "+fields['types'][0]
+        tmp = "a\n"+fields['types'][0]
     result = re.sub('\$TYPE\$', tmp, result)
+
+    result = re.sub('\$DATE\$', datetime.date.today().strftime("%B %d, %Y"), result)
     return result
 
 def donor_totals(records):
@@ -142,11 +148,13 @@ def all_records(filename):
     lines = handle.readlines()
     handle.close()
     result = []
-    for line in lines:
-        result.append( 
-            dict(zip(
-                ['honoree', 'donor', 'amount', 'donee', 'type'], 
-                re.split(',', line.strip()))))
+    for line in lines[1:]:
+        values = re.split(',', line.strip())
+        if values[0]:
+            result.append( 
+                dict(zip(
+                    ['honoree', 'donor', 'amount', 'donee', 'type'], 
+                    values)))
     return result
 
 
@@ -156,7 +164,7 @@ if __name__ == "__main__":
     dee_tots = donee_totals(records)
     htm = htmlier.HTMLier()
     style = htm.tag('style', 
-        "i {text-align: center; font-family: 'New Times Roman'; font-size: 12pt;} div {text-align: center;}")
+        "i {text-align: center; font-family: 'New Times Roman'; font-size: 12pt;} div {text-align: center; margin: 0 auto;} body{ margin: 0 auto; }")
     head = htm.tag('head', style)
     content = ""
     for donor,data in don_tots.items():
@@ -170,7 +178,7 @@ if __name__ == "__main__":
             if "No goods" in line:
                 reg = False
             if not reg:
-                mid += htm.tag('i', line, style='font-size: 11pt;')
+                mid += htm.tag('i', line, style='font-size: 9pt;')
             else:    
                 mid += htm.tag('i', line)
             mid += "<br>"
@@ -183,14 +191,17 @@ if __name__ == "__main__":
         temp = donee_announce(donee, data)
         lines = re.split('\n', temp)
         mid = ""
-        for line in lines:
+        for line in lines[0:-1]:
             mid += htm.tag('i', line)
             mid += "<br>"
+
+        mid += htm.tag('i', lines[-1], style='font-size: 9pt;')    
+        mid += "<br>"
         note += htm.tag('div', mid) 
         content += note
 
+    
     body = htm.tag('body', content)
-
     page = htm.tag('html', head+body)
    
     handle = open(sys.argv[2], 'w')
